@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import DynamicMap from "@/components/DynamicMap";
 import { CATEGORIA_PUNTO_ICONO, CATEGORIA_PUNTO_LABELS, CIUDADES, ciudadCoords } from "@/lib/constants";
+import { useGeocode } from "@/lib/useGeocode";
 
 export default function NuevoPuntoApoyoPage() {
   const router = useRouter();
@@ -18,6 +19,13 @@ export default function NuevoPuntoApoyoPage() {
   const [loading, setLoading] = useState(false);
 
   const center = ciudadCoords(ciudad);
+
+  const geocodeQuery = direccion.trim() ? `${direccion}, ${ciudad}, Colombia` : "";
+  const { status: geoStatus, result: geoResult } = useGeocode(geocodeQuery);
+  useEffect(() => {
+    if (geoResult) setPin(geoResult);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geoResult]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -94,14 +102,24 @@ export default function NuevoPuntoApoyoPage() {
         <div>
           <label>Dirección</label>
           <input required value={direccion} onChange={(e) => setDireccion(e.target.value)} />
+          {geoStatus === "buscando" && <p className="text-xs text-slate-500 mt-1">Buscando dirección en el mapa...</p>}
+          {geoStatus === "encontrado" && <p className="text-xs text-green-700 mt-1">📍 Ubicación encontrada, ajústala en el mapa si hace falta.</p>}
+          {geoStatus === "no-encontrado" && <p className="text-xs text-amber-700 mt-1">No encontramos esa dirección exacta, marca el punto en el mapa.</p>}
         </div>
         <div>
           <label>Capacidad (personas o raciones, opcional)</label>
           <input type="number" min={0} value={capacidad} onChange={(e) => setCapacidad(e.target.value)} placeholder="Ej. 180 almuerzos al día" />
         </div>
         <div>
-          <label>Ubicación en el mapa (toca para marcar)</label>
-          <DynamicMap center={pin || [center.lat, center.lng]} zoom={14} pin={pin} onMapClick={(lat, lng) => setPin([lat, lng])} height="320px" />
+          <label>Ubicación en el mapa (toca para marcar o ajustar)</label>
+          <DynamicMap
+            center={pin || [center.lat, center.lng]}
+            zoom={14}
+            pin={pin}
+            flyTo={pin}
+            onMapClick={(lat, lng) => setPin([lat, lng])}
+            height="320px"
+          />
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button className="btn btn-primary w-full" disabled={loading}>

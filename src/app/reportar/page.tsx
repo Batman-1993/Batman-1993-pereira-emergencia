@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import DynamicMap from "@/components/DynamicMap";
 import { CIUDADES, ciudadCoords, TIPO_LABELS, URGENCIA_LABELS } from "@/lib/constants";
+import { useGeocode } from "@/lib/useGeocode";
 
 export default function ReportarPage() {
   const router = useRouter();
@@ -28,6 +29,15 @@ export default function ReportarPage() {
       () => setError("No se pudo obtener tu ubicación. Marca el punto en el mapa manualmente.")
     );
   }
+
+  // Al escribir la dirección, la buscamos y movemos el pin/mapa solos
+  // (funciona igual en escritorio y celular, no depende del mouse).
+  const geocodeQuery = direccion.trim() ? `${direccion}, ${ciudad}, Colombia` : "";
+  const { status: geoStatus, result: geoResult } = useGeocode(geocodeQuery);
+  useEffect(() => {
+    if (geoResult) setPin(geoResult);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geoResult]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -118,17 +128,27 @@ export default function ReportarPage() {
           <div>
             <label>Dirección / punto de referencia</label>
             <input value={direccion} onChange={(e) => setDireccion(e.target.value)} placeholder="Ej. Cra 10 # 20-30, barrio Cuba" />
+            {geoStatus === "buscando" && <p className="text-xs text-slate-500 mt-1">Buscando dirección en el mapa...</p>}
+            {geoStatus === "encontrado" && <p className="text-xs text-green-700 mt-1">📍 Ubicación encontrada, ajústala en el mapa si hace falta.</p>}
+            {geoStatus === "no-encontrado" && <p className="text-xs text-amber-700 mt-1">No encontramos esa dirección exacta, marca el punto en el mapa.</p>}
           </div>
         </div>
 
         <div>
           <div className="flex items-center justify-between">
-            <label className="!mb-0">Ubicación en el mapa (toca para marcar)</label>
+            <label className="!mb-0">Ubicación en el mapa (toca para marcar o ajustar)</label>
             <button type="button" onClick={useMyLocation} className="text-xs text-red-600 font-semibold">
               📍 Usar mi ubicación
             </button>
           </div>
-          <DynamicMap center={pin || [center.lat, center.lng]} zoom={14} pin={pin} onMapClick={(lat, lng) => setPin([lat, lng])} height="320px" />
+          <DynamicMap
+            center={pin || [center.lat, center.lng]}
+            zoom={14}
+            pin={pin}
+            flyTo={pin}
+            onMapClick={(lat, lng) => setPin([lat, lng])}
+            height="320px"
+          />
         </div>
 
         <div>

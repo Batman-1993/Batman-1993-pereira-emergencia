@@ -1,6 +1,7 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
+import { useEffect } from "react";
 import L from "leaflet";
 import Link from "next/link";
 import { URGENCIA_COLOR, URGENCIA_LABELS, TIPO_LABELS } from "@/lib/constants";
@@ -46,6 +47,7 @@ export default function MapView({
   points,
   onMapClick,
   pin,
+  flyTo,
   height = "480px",
 }: {
   center: [number, number];
@@ -54,6 +56,8 @@ export default function MapView({
   points?: SimplePoint[];
   onMapClick?: (lat: number, lng: number) => void;
   pin?: [number, number] | null;
+  // Cuando cambia, mueve el mapa a esta posición (ej. tras geocodificar una dirección).
+  flyTo?: [number, number] | null;
   height?: string;
 }) {
   return (
@@ -64,6 +68,7 @@ export default function MapView({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {onMapClick && <ClickCatcher onMapClick={onMapClick} />}
+        {flyTo && <RecenterOnChange target={flyTo} />}
         {pin && (
           <Marker position={pin} icon={colorIcon("#0f172a")}>
             <Popup>Ubicación seleccionada</Popup>
@@ -107,5 +112,14 @@ function ClickCatcher({ onMapClick }: { onMapClick: (lat: number, lng: number) =
       onMapClick(e.latlng.lat, e.latlng.lng);
     },
   });
+  return null;
+}
+
+function RecenterOnChange({ target }: { target: [number, number] }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo(target, Math.max(map.getZoom(), 16), { duration: 0.8 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target[0], target[1]]);
   return null;
 }
