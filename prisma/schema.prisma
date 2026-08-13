@@ -1,0 +1,182 @@
+// Esquema de datos de Pereira Emergencia.
+// Dev: SQLite (cero configuración). Prod: cambia el provider/DATABASE_URL a Postgres.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Nota: SQLite no soporta enums nativos en Prisma, así que los "enums" de
+// este esquema (Role, TipoReporte, Urgencia, EstadoReporte, EstadoPersona)
+// se modelan como String y se validan en la capa de aplicación (src/lib/constants.ts).
+// Si migras a Postgres puedes convertirlos a `enum` reales.
+//
+// Role: CIUDADANO | VOLUNTARIO | ADMIN_CENTRO | ADMIN
+// TipoReporte: RESCATE | ESTRUCTURA_RIESGO | FALTA_AGUA | FALTA_ALIMENTOS | OTRO
+// Urgencia (semáforo): CRITICA (rojo) | MODERADA (amarillo) | LEVE (verde)
+// EstadoReporte: PENDIENTE | EN_ATENCION | RESUELTO | DESCARTADO
+// EstadoPersona: DESAPARECIDO | ENCONTRADO_VIVO | ENCONTRADO_FALLECIDO
+
+model User {
+  id           String   @id @default(cuid())
+  nombre       String
+  email        String   @unique
+  passwordHash String
+  telefono     String?
+  role         String   @default("CIUDADANO")
+  // Datos adicionales cuando el usuario se registra como voluntario rescatista
+  especialidad String? // ej. rescate en escombros, primeros auxilios, logística
+  ciudad       String?
+  disponible   Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  reportes         Report[]           @relation("ReporteCreadoPor")
+  asignaciones     ReportAssignment[]
+  statusLogs       ReportStatusLog[]
+  centrosACargo    CollectionCenter[] @relation("CentroResponsable")
+  donaciones       Donation[]
+  pushSubscriptions PushSubscription[]
+}
+
+model Report {
+  id          String        @id @default(cuid())
+  tipo        String
+  urgencia    String
+  estado      String        @default("PENDIENTE")
+  titulo      String
+  descripcion String
+  ciudad      String        @default("Pereira")
+  direccion   String?
+  lat         Float
+  lng         Float
+  personasAfectadas Int?    @default(0)
+
+  reportadoPor   User?   @relation("ReporteCreadoPor", fields: [reportadoPorId], references: [id])
+  reportadoPorId String?
+  // Contacto de quien reporta cuando no tiene cuenta (reporte anónimo/rápido en plena emergencia)
+  contactoNombre  String?
+  contactoTelefono String?
+
+  fotos       Photo[]
+  asignaciones ReportAssignment[]
+  statusLogs  ReportStatusLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ciudad])
+  @@index([urgencia])
+  @@index([estado])
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  url       String
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId  String
+  createdAt DateTime @default(now())
+}
+
+// Historial de seguimiento: cada cambio de estado queda registrado para
+// poder ver la evolución del desastre en cada reporte.
+model ReportStatusLog {
+  id        String        @id @default(cuid())
+  report    Report        @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId  String
+  estado    String
+  nota      String?
+  autor     User?         @relation(fields: [autorId], references: [id])
+  autorId   String?
+  createdAt DateTime      @default(now())
+
+  @@index([reportId])
+}
+
+// Asignación de un voluntario a un reporte, para llevar control de ejecución.
+model ReportAssignment {
+  id         String   @id @default(cuid())
+  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId   String
+  voluntario User     @relation(fields: [voluntarioId], references: [id])
+  voluntarioId String
+  createdAt  DateTime @default(now())
+
+  @@unique([reportId, voluntarioId])
+}
+
+model MissingPerson {
+  id             String        @id @default(cuid())
+  nombreCompleto String
+  identificacion String?
+  edad           Int?
+  genero         String?
+  direccion      String?
+  ciudad         String        @default("Pereira")
+  descripcion    String?
+  ultimaVezVisto String?
+  fotoUrl        String?
+  estado         String        @default("DESAPARECIDO")
+  reportadoPorNombre   String
+  reportadoPorTelefono String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+// Centros de acopio: inventario de donaciones y control de personas ayudadas.
+model CollectionCenter {
+  id            String   @id @default(cuid())
+  nombre        String
+  ciudad        String   @default("Pereira")
+  direccion     String
+  lat           Float
+  lng           Float
+  capacidad     Int?
+  personasAyudadas Int   @default(0)
+  telefono      String?
+  responsable   User?    @relation("CentroResponsable", fields: [responsableId], references: [id])
+  responsableId String?
+  createdAt     DateTime @default(now())
+
+  inventario InventoryItem[]
+  donaciones Donation[]
+}
+
+model InventoryItem {
+  id         String           @id @default(cuid())
+  center     CollectionCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  centerId   String
+  nombre     String // ej. Agua embotellada, Kit aseo, Cobijas
+  categoria  String // agua, alimentos, aseo, medicinas, abrigo, otros
+  cantidad   Int              @default(0)
+  unidad     String           @default("unidades")
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([centerId, nombre])
+}
+
+model Donation {
+  id         String           @id @default(cuid())
+  center     CollectionCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  centerId   String
+  donante    User?            @relation(fields: [donanteId], references: [id])
+  donanteId  String?
+  donanteNombre String?
+  item       String
+  cantidad   Int
+  unidad     String @default("unidades")
+  createdAt  DateTime         @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  ciudad    String?  @default("Pereira")
+  createdAt DateTime @default(now())
+}
