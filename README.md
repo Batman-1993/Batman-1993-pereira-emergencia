@@ -16,7 +16,7 @@ Funciona desde el navegador de **cualquier celular** (Android/iPhone), sin neces
 ## Stack técnico
 
 - **Next.js 14** (App Router) + TypeScript — una sola app para frontend y backend (API routes).
-- **Prisma ORM** — SQLite en desarrollo (cero configuración), fácilmente migrable a Postgres en producción.
+- **Prisma ORM + Postgres** — misma base de datos en desarrollo y producción (gratis con [Neon](https://neon.tech)).
 - **Leaflet + OpenStreetMap** — mapas reales sin necesidad de API key ni tarjeta de crédito.
 - **Web Push (VAPID)** — notificaciones push nativas del navegador, sin depender de Firebase.
 - **Tailwind CSS** — estilos simples y responsivos, pensados para pantallas de celular y botones grandes usables bajo estrés.
@@ -24,11 +24,13 @@ Funciona desde el navegador de **cualquier celular** (Android/iPhone), sin neces
 
 ## Correr en local
 
+Necesitas una base Postgres (gratis en 1 minuto con [Neon](https://neon.tech): crea un proyecto y copia el "connection string").
+
 ```bash
 npm install
-cp .env.example .env
-npx prisma migrate dev --name init   # crea la base SQLite y aplica el esquema
-npm run db:seed                      # (opcional) datos de ejemplo: reportes, centro de acopio, voluntario demo
+cp .env.example .env    # pega tu DATABASE_URL de Neon en .env
+npx prisma migrate dev --name init   # crea las tablas
+npm run db:seed                      # (opcional) datos de ejemplo: reportes, puntos de apoyo, voluntario demo
 npm run dev
 ```
 
@@ -52,18 +54,25 @@ Sin estas llaves configuradas, la app funciona igual — simplemente no se enví
 - **Android (Chrome)**: menú ⋮ → "Instalar app" / "Agregar a pantalla de inicio".
 - **iPhone (Safari)**: botón compartir → "Agregar a pantalla de inicio". En iOS las notificaciones push solo funcionan después de instalarla así (requisito de Apple).
 
-## Desplegar en producción
+## Desplegar en producción (gratis, ~10 minutos)
 
-La forma más simple es **Vercel** (plan gratuito sirve para empezar):
+La app ya está lista para **Vercel + Postgres** sin tocar código: la base de datos es Postgres desde el inicio y las fotos se guardan como datos en la base (no en disco), así que funcionan tal cual en un hosting serverless como Vercel.
 
-1. Sube este repositorio a GitHub (ya está) y conéctalo en https://vercel.com/new.
-2. Configura las variables de entorno (`DATABASE_URL`, `JWT_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`).
-3. **Importante**: Vercel no tiene disco persistente, así que para producción real necesitas:
-   - **Base de datos**: cambia `provider = "sqlite"` por `provider = "postgresql"` en `prisma/schema.prisma` y usa una base gestionada (ej. [Neon](https://neon.tech), [Supabase](https://supabase.com) o [Vercel Postgres](https://vercel.com/storage/postgres), todas con plan gratuito).
-   - **Fotos**: el guardado actual escribe en `public/uploads` (sirve para correr en un servidor tradicional con disco persistente, ej. una VM o Railway/Render). En Vercel debes reemplazar `src/lib/upload.ts` por un bucket como S3, Cloudflare R2 o Cloudinary.
-4. Corre `npx prisma migrate deploy` contra la base de producción antes del primer despliegue.
+1. **Base de datos**: crea una cuenta gratis en [neon.tech](https://neon.tech), crea un proyecto y copia el "connection string" (empieza con `postgresql://...`).
+2. **Desplegar**: entra a [vercel.com/new](https://vercel.com/new), "Import Git Repository" y selecciona `Batman-1993/pereira-emergencia`.
+3. En "Environment Variables" agrega:
+   - `DATABASE_URL` → el connection string de Neon del paso 1
+   - `JWT_SECRET` → cualquier cadena larga y aleatoria (ej. `openssl rand -base64 48`)
+   - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` → genera el par con `npx web-push generate-vapid-keys`
+   - `VAPID_SUBJECT` → `mailto:tu-correo@dominio.com`
+4. En "Build Command" de Vercel pon: `npx prisma migrate deploy && npm run build` (así crea las tablas automáticamente en el primer despliegue).
+5. Deploy. En 1-2 minutos tienes una URL pública (`https://tu-app.vercel.app`) que funciona desde cualquier celular.
 
-Alternativa sin estos límites: desplegar en **Railway** o **Render** con un volumen persistente — ahí `public/uploads` y SQLite/Postgres funcionan tal cual, sin cambios de código.
+Después de desplegar, corre `npm run db:seed` apuntando tu `.env` local a la misma `DATABASE_URL` de Neon si quieres cargar los datos de ejemplo también en producción (opcional — bórralos luego desde la base si eran solo para probar).
+
+**Nota sobre fotos**: se guardan como `data:` URLs directamente en Postgres (funciona en cualquier hosting sin configurar nada extra). Si el volumen de fotos crece mucho, conviene migrar `src/lib/upload.ts` a un bucket (S3, Cloudflare R2, Cloudinary) para no inflar la base de datos — no es necesario para empezar.
+
+Alternativa: **Railway** o **Render** también sirven (conectan igual a la base de Neon), útiles si más adelante quieres disco persistente para otros usos.
 
 ## Modelo de datos (resumen)
 
@@ -73,7 +82,7 @@ Alternativa sin estos límites: desplegar en **Railway** o **Render** con un vol
 - `SupportPoint` + `InventoryItem` + `Donation`: puntos de apoyo (acopio, salud, cocina, carga/WiFi, social) con categoría, estado abierto/cerrado, verificación (`verificado` + `ultimaConfirmacion`), inventario y donaciones registradas.
 - `PushSubscription`: suscripciones a notificaciones push, por ciudad.
 
-Los "enums" de negocio (tipos de reporte, niveles de urgencia, estados) viven como texto validado en `src/lib/constants.ts`, porque SQLite no soporta enums nativos de Prisma; si migras a Postgres puedes convertirlos a `enum` reales sin tocar el resto de la app.
+Los "enums" de negocio (tipos de reporte, niveles de urgencia, categorías, estados) viven como texto validado en `src/lib/constants.ts` en vez de `enum` de Prisma — más simple de extender (ej. agregar una categoría nueva de punto de apoyo es un solo cambio en ese archivo).
 
 ## Qué falta para un despliegue de producción real
 

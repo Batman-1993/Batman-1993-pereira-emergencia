@@ -1,18 +1,18 @@
 // Esquema de datos de Pereira Emergencia.
-// Dev: SQLite (cero configuración). Prod: cambia el provider/DATABASE_URL a Postgres.
+// Postgres (Neon/Vercel Postgres/Supabase/local) — ver README para desarrollo local.
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Nota: SQLite no soporta enums nativos en Prisma, así que los "enums" de
-// este esquema (Role, TipoReporte, Urgencia, EstadoReporte, EstadoPersona)
-// se modelan como String y se validan en la capa de aplicación (src/lib/constants.ts).
-// Si migras a Postgres puedes convertirlos a `enum` reales.
+// Nota: los "enums" de este esquema (Role, TipoReporte, Urgencia,
+// EstadoReporte, EstadoPersona) se modelan como String y se validan en la
+// capa de aplicación (src/lib/constants.ts) en vez de como `enum` de Prisma,
+// para poder seguir usando SQLite en desarrollo local sin duplicar el esquema.
 //
 // Role: CIUDADANO | VOLUNTARIO | ADMIN_CENTRO | ADMIN
 // TipoReporte: RESCATE | ESTRUCTURA_RIESGO | FALTA_AGUA | FALTA_ALIMENTOS | OTRO
