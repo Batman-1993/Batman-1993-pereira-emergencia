@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const [donation] = await prisma.$transaction([
     prisma.donation.create({
       data: {
-        centerId: params.id,
+        pointId: params.id,
         item,
         cantidad,
         unidad: unidad || "unidades",
@@ -22,10 +22,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       },
     }),
     prisma.inventoryItem.upsert({
-      where: { centerId_nombre: { centerId: params.id, nombre: item } },
+      where: { pointId_nombre: { pointId: params.id, nombre: item } },
       update: { cantidad: { increment: cantidad }, unidad: unidad || "unidades" },
       create: {
-        centerId: params.id,
+        pointId: params.id,
         nombre: item,
         categoria: categoria || "otros",
         cantidad,

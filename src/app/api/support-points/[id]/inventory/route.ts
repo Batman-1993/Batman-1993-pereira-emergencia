@@ -13,9 +13,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const item = await prisma.inventoryItem.upsert({
-    where: { centerId_nombre: { centerId: params.id, nombre } },
+    where: { pointId_nombre: { pointId: params.id, nombre } },
     update: { cantidad: { increment: cantidad }, categoria, unidad: unidad || "unidades" },
-    create: { centerId: params.id, nombre, categoria, cantidad, unidad: unidad || "unidades" },
+    create: { pointId: params.id, nombre, categoria, cantidad, unidad: unidad || "unidades" },
   });
 
   return NextResponse.json({ item });

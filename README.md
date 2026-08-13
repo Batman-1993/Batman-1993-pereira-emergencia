@@ -10,7 +10,7 @@ Funciona desde el navegador de **cualquier celular** (Android/iPhone), sin neces
 - **Mapa en tiempo real** por ciudad (Pereira, Dosquebradas, Santa Rosa de Cabal, La Virginia, Marsella, Cartago — fácil de ampliar a más ciudades) con marcadores de colores por urgencia.
 - **Notificaciones push** al celular cuando entra un reporte nuevo en tu ciudad (Web Push, funciona incluso con la app cerrada en Android; en iPhone requiere instalar la PWA primero, ver abajo).
 - **Cuentas de voluntarios rescatistas**: cualquiera puede registrarse como voluntario, ver los reportes activos ordenados por urgencia, asignarse un caso y actualizar su estado (pendiente → en atención → resuelto), dejando un historial de seguimiento (evolución del desastre).
-- **Centros de acopio**: registro de puntos de acopio en el mapa, inventario de donaciones por tipo (agua, alimentos, aseo, medicinas, abrigo...), registro de donaciones, y contador de personas ayudadas por centro.
+- **Puntos de apoyo** (acopio, salud, cocinas comunitarias, carga/WiFi, social): registro en el mapa con tags de categoría, inventario de donaciones por tipo (agua, alimentos, aseo, medicinas, abrigo...), registro de donaciones, contador de personas ayudadas/capacidad, estado abierto/cerrado, distancia a tu ubicación, y un semáforo de "última confirmación" (🟢 reciente < 1 h / 🟠 horas < 24 h / 🔴 sin confirmar > 24 h) que los voluntarios actualizan con un botón de "Confirmar".
 - **Personas desaparecidas**: base de datos comunitaria con nombre, identificación, edad, dirección, foto, descripción y estado (desaparecido / encontrado con vida / encontrado fallecido), con buscador.
 
 ## Stack técnico
@@ -70,7 +70,7 @@ Alternativa sin estos límites: desplegar en **Railway** o **Render** con un vol
 - `Report`: reportes de emergencia (tipo, urgencia semáforo, estado, ubicación, fotos, historial de seguimiento `ReportStatusLog`, asignaciones de voluntarios).
 - `User`: ciudadanos y voluntarios rescatistas (`role`: CIUDADANO, VOLUNTARIO, ADMIN_CENTRO, ADMIN).
 - `MissingPerson`: personas desaparecidas.
-- `CollectionCenter` + `InventoryItem` + `Donation`: centros de acopio, su inventario y las donaciones registradas.
+- `SupportPoint` + `InventoryItem` + `Donation`: puntos de apoyo (acopio, salud, cocina, carga/WiFi, social) con categoría, estado abierto/cerrado, verificación (`verificado` + `ultimaConfirmacion`), inventario y donaciones registradas.
 - `PushSubscription`: suscripciones a notificaciones push, por ciudad.
 
 Los "enums" de negocio (tipos de reporte, niveles de urgencia, estados) viven como texto validado en `src/lib/constants.ts`, porque SQLite no soporta enums nativos de Prisma; si migras a Postgres puedes convertirlos a `enum` reales sin tocar el resto de la app.

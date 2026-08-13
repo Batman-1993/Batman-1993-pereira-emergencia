@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const center = await prisma.collectionCenter.findUnique({
+  const point = await prisma.supportPoint.findUnique({
     where: { id: params.id },
     include: {
       inventario: { orderBy: { nombre: "asc" } },
@@ -11,11 +11,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       responsable: { select: { nombre: true, telefono: true } },
     },
   });
-  if (!center) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
-  return NextResponse.json({ center });
+  if (!point) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+  return NextResponse.json({ point });
 }
 
-// Registra personas ayudadas en este centro (control de ejecución).
+// Acciones de control de ejecución: registrar personas ayudadas, confirmar
+// vigencia del punto (check-in) y abrir/cerrar.
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session || !["VOLUNTARIO", "ADMIN", "ADMIN_CENTRO"].includes(session.role)) {
@@ -23,11 +24,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
   const body = await req.json().catch(() => null);
   const incremento = Number(body?.personasAyudadasIncremento || 0);
+  const confirmar = Boolean(body?.confirmar);
+  const abierto = typeof body?.abierto === "boolean" ? body.abierto : undefined;
 
-  const center = await prisma.collectionCenter.update({
+  const point = await prisma.supportPoint.update({
     where: { id: params.id },
-    data: { personasAyudadas: { increment: incremento } },
+    data: {
+      ...(incremento ? { personasAyudadas: { increment: incremento } } : {}),
+      ...(confirmar ? { verificado: true, ultimaConfirmacion: new Date() } : {}),
+      ...(abierto !== undefined ? { abierto } : {}),
+    },
   });
 
-  return NextResponse.json({ center });
+  return NextResponse.json({ point });
 }

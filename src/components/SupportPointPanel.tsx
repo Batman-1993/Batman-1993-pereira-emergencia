@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 
 const CATEGORIAS = ["agua", "alimentos", "aseo", "medicinas", "abrigo", "otros"];
 
-export default function CenterPanel({ centerId, puedeGestionar }: { centerId: string; puedeGestionar: boolean }) {
+export default function SupportPointPanel({
+  pointId,
+  puedeGestionar,
+  abierto,
+}: {
+  pointId: string;
+  puedeGestionar: boolean;
+  abierto: boolean;
+}) {
   const router = useRouter();
   const [item, setItem] = useState("");
   const [categoria, setCategoria] = useState("alimentos");
@@ -13,7 +21,7 @@ export default function CenterPanel({ centerId, puedeGestionar }: { centerId: st
   const [unidad, setUnidad] = useState("unidades");
   const [donanteNombre, setDonanteNombre] = useState("");
   const [loading, setLoading] = useState(false);
-  const [ayudaLoading, setAyudaLoading] = useState(false);
+  const [accionLoading, setAccionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function donar(e: React.FormEvent) {
@@ -24,7 +32,7 @@ export default function CenterPanel({ centerId, puedeGestionar }: { centerId: st
       return;
     }
     setLoading(true);
-    const res = await fetch(`/api/centers/${centerId}/donations`, {
+    const res = await fetch(`/api/support-points/${pointId}/donations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ item, categoria, cantidad: Number(cantidad), unidad, donanteNombre }),
@@ -39,19 +47,43 @@ export default function CenterPanel({ centerId, puedeGestionar }: { centerId: st
     router.refresh();
   }
 
-  async function registrarAyuda(n: number) {
-    setAyudaLoading(true);
-    await fetch(`/api/centers/${centerId}`, {
+  async function accion(body: Record<string, unknown>) {
+    setAccionLoading(true);
+    await fetch(`/api/support-points/${pointId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ personasAyudadasIncremento: n }),
+      body: JSON.stringify(body),
     });
-    setAyudaLoading(false);
+    setAccionLoading(false);
     router.refresh();
   }
 
   return (
     <div className="space-y-4">
+      {puedeGestionar && (
+        <div className="card space-y-3">
+          <h3 className="font-semibold">Control de ejecución</h3>
+          <div className="flex gap-2 flex-wrap">
+            <button className="btn btn-outline" disabled={accionLoading} onClick={() => accion({ confirmar: true })}>
+              ✅ Confirmar que sigue activo
+            </button>
+            <button className="btn btn-outline" disabled={accionLoading} onClick={() => accion({ abierto: !abierto })}>
+              {abierto ? "Marcar como cerrado" : "Marcar como abierto"}
+            </button>
+          </div>
+          <div>
+            <p className="text-sm mb-1 font-semibold">Registrar personas ayudadas</p>
+            <div className="flex gap-2">
+              {[1, 5, 10, 50].map((n) => (
+                <button key={n} className="btn btn-outline" disabled={accionLoading} onClick={() => accion({ personasAyudadasIncremento: n })}>
+                  +{n}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={donar} className="card space-y-3">
         <h3 className="font-semibold">Registrar donación</h3>
         <div className="grid sm:grid-cols-2 gap-3">
@@ -87,19 +119,6 @@ export default function CenterPanel({ centerId, puedeGestionar }: { centerId: st
           {loading ? "Guardando..." : "Registrar donación"}
         </button>
       </form>
-
-      {puedeGestionar && (
-        <div className="card">
-          <h3 className="font-semibold mb-2">Registrar personas ayudadas</h3>
-          <div className="flex gap-2">
-            {[1, 5, 10, 50].map((n) => (
-              <button key={n} className="btn btn-outline" disabled={ayudaLoading} onClick={() => registrarAyuda(n)}>
-                +{n}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ const links = [
   { href: "/", label: "Mapa" },
   { href: "/reportar", label: "Reportar" },
   { href: "/desaparecidos", label: "Desaparecidos" },
-  { href: "/centros-acopio", label: "Centros de acopio" },
+  { href: "/puntos-apoyo", label: "Puntos de apoyo" },
 ];
 
 export default function NavBar({ session }: { session: SessionPayload | null }) {

@@ -20,12 +20,16 @@ async function main() {
     },
   });
 
-  const centro = await prisma.collectionCenter.upsert({
+  const unaHoraAtras = new Date(Date.now() - 30 * 60 * 1000);
+  const diezHorasAtras = new Date(Date.now() - 10 * 60 * 60 * 1000);
+
+  const centro = await prisma.supportPoint.upsert({
     where: { id: "seed-centro-1" },
     update: {},
     create: {
       id: "seed-centro-1",
       nombre: "Coliseo Menor Bicentenario - Punto de acopio",
+      categoria: "ACOPIO",
       ciudad: "Pereira",
       direccion: "Cra. 27 con Av. Circunvalar, Pereira",
       lat: 4.8095,
@@ -33,6 +37,8 @@ async function main() {
       capacidad: 500,
       personasAyudadas: 120,
       responsableId: voluntario.id,
+      verificado: true,
+      ultimaConfirmacion: unaHoraAtras,
       inventario: {
         create: [
           { nombre: "Agua embotellada", categoria: "agua", cantidad: 400, unidad: "botellas" },
@@ -40,6 +46,47 @@ async function main() {
           { nombre: "Mercado básico", categoria: "alimentos", cantidad: 60, unidad: "paquetes" },
         ],
       },
+    },
+  });
+
+  await prisma.supportPoint.upsert({
+    where: { id: "seed-cocina-1" },
+    update: {},
+    create: {
+      id: "seed-cocina-1",
+      nombre: "Cocina Comunitaria Boston",
+      categoria: "COCINA",
+      ciudad: "Pereira",
+      direccion: "Boston, Cl. 24 # 12-05, Pereira",
+      lat: 4.8121,
+      lng: -75.6841,
+      capacidad: 180,
+      personasAyudadas: 120,
+      responsableId: voluntario.id,
+      verificado: true,
+      ultimaConfirmacion: diezHorasAtras,
+      inventario: {
+        create: [{ nombre: "Almuerzos servidos hoy", categoria: "alimentos", cantidad: 120, unidad: "raciones" }],
+      },
+    },
+  });
+
+  await prisma.supportPoint.upsert({
+    where: { id: "seed-salud-1" },
+    update: {},
+    create: {
+      id: "seed-salud-1",
+      nombre: "Puesto de Salud Boston",
+      categoria: "SALUD",
+      ciudad: "Pereira",
+      direccion: "La Churria, Cra 10 # 26-40, Pereira",
+      lat: 4.8005,
+      lng: -75.6889,
+      capacidad: 30,
+      personasAyudadas: 22,
+      abierto: false,
+      verificado: false,
+      ultimaConfirmacion: null,
     },
   });
 

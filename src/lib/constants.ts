@@ -61,3 +61,56 @@ export const ESTADO_PERSONA_COLOR: Record<string, string> = {
   ENCONTRADO_VIVO: "#16a34a",
   ENCONTRADO_FALLECIDO: "#6b7280",
 };
+
+// Categorías de puntos de apoyo (acopio, salud, cocinas comunitarias, etc.)
+export const CATEGORIA_PUNTO_LABELS: Record<string, string> = {
+  ACOPIO: "Acopio",
+  SALUD: "Salud",
+  COCINA: "Cocina comunitaria",
+  CARGA_WIFI: "Carga / WiFi",
+  SOCIAL: "Social",
+  OTRO: "Otro",
+};
+
+export const CATEGORIA_PUNTO_ICONO: Record<string, string> = {
+  ACOPIO: "📦",
+  SALUD: "🩺",
+  COCINA: "🍲",
+  CARGA_WIFI: "🔌",
+  SOCIAL: "🤝",
+  OTRO: "📍",
+};
+
+export const CATEGORIA_PUNTO_COLOR: Record<string, string> = {
+  ACOPIO: "#2563eb",
+  SALUD: "#dc2626",
+  COCINA: "#ea580c",
+  CARGA_WIFI: "#7c3aed",
+  SOCIAL: "#0d9488",
+  OTRO: "#475569",
+};
+
+// Semáforo de "última confirmación" (check-in), igual al de apps
+// comunitarias de respuesta a desastres: reciente / horas / sin confirmar.
+export function estadoConfirmacion(ultimaConfirmacion: string | Date | null | undefined) {
+  if (!ultimaConfirmacion) {
+    return { label: "Sin confirmar", color: "#dc2626", key: "SIN_CONFIRMAR" as const };
+  }
+  const horas = (Date.now() - new Date(ultimaConfirmacion).getTime()) / 3600000;
+  if (horas < 1) return { label: "Reciente (< 1 h)", color: "#16a34a", key: "RECIENTE" as const };
+  if (horas < 24) return { label: `Hace ${Math.round(horas)} h`, color: "#f59e0b", key: "HORAS" as const };
+  return { label: "Sin confirmar (> 24 h)", color: "#dc2626", key: "SIN_CONFIRMAR" as const };
+}
+
+// Distancia en km entre dos puntos (fórmula haversine), para mostrar
+// "a X km" respecto a la ubicación del usuario.
+export function distanciaKm(a: [number, number], b: [number, number]) {
+  const R = 6371;
+  const dLat = ((b[0] - a[0]) * Math.PI) / 180;
+  const dLng = ((b[1] - a[1]) * Math.PI) / 180;
+  const lat1 = (a[0] * Math.PI) / 180;
+  const lat2 = (b[0] * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}

@@ -19,6 +19,7 @@ datasource db {
 // Urgencia (semáforo): CRITICA (rojo) | MODERADA (amarillo) | LEVE (verde)
 // EstadoReporte: PENDIENTE | EN_ATENCION | RESUELTO | DESCARTADO
 // EstadoPersona: DESAPARECIDO | ENCONTRADO_VIVO | ENCONTRADO_FALLECIDO
+// CategoriaPunto: ACOPIO | SALUD | COCINA | CARGA_WIFI | SOCIAL | OTRO
 
 model User {
   id           String   @id @default(cuid())
@@ -36,7 +37,7 @@ model User {
   reportes         Report[]           @relation("ReporteCreadoPor")
   asignaciones     ReportAssignment[]
   statusLogs       ReportStatusLog[]
-  centrosACargo    CollectionCenter[] @relation("CentroResponsable")
+  puntosACargo     SupportPoint[]     @relation("PuntoResponsable")
   donaciones       Donation[]
   pushSubscriptions PushSubscription[]
 }
@@ -125,18 +126,25 @@ model MissingPerson {
   updatedAt      DateTime      @updatedAt
 }
 
-// Centros de acopio: inventario de donaciones y control de personas ayudadas.
-model CollectionCenter {
+// Puntos de apoyo: acopio, salud, cocinas comunitarias, carga/wifi, social...
+// Cada uno se puede "confirmar" (check-in) para mostrar un semáforo de
+// última confirmación (reciente / horas / sin confirmar), como el de
+// apps comunitarias de respuesta a desastres.
+model SupportPoint {
   id            String   @id @default(cuid())
   nombre        String
+  categoria     String   @default("ACOPIO")
   ciudad        String   @default("Pereira")
   direccion     String
   lat           Float
   lng           Float
+  abierto       Boolean  @default(true)
+  verificado    Boolean  @default(false)
+  ultimaConfirmacion DateTime?
   capacidad     Int?
   personasAyudadas Int   @default(0)
   telefono      String?
-  responsable   User?    @relation("CentroResponsable", fields: [responsableId], references: [id])
+  responsable   User?    @relation("PuntoResponsable", fields: [responsableId], references: [id])
   responsableId String?
   createdAt     DateTime @default(now())
 
@@ -145,29 +153,29 @@ model CollectionCenter {
 }
 
 model InventoryItem {
-  id         String           @id @default(cuid())
-  center     CollectionCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
-  centerId   String
-  nombre     String // ej. Agua embotellada, Kit aseo, Cobijas
+  id         String       @id @default(cuid())
+  point      SupportPoint @relation(fields: [pointId], references: [id], onDelete: Cascade)
+  pointId    String
+  nombre     String // ej. Agua embotellada, Kit aseo, Cobijas, Almuerzos
   categoria  String // agua, alimentos, aseo, medicinas, abrigo, otros
-  cantidad   Int              @default(0)
-  unidad     String           @default("unidades")
-  updatedAt  DateTime         @updatedAt
+  cantidad   Int          @default(0)
+  unidad     String       @default("unidades")
+  updatedAt  DateTime     @updatedAt
 
-  @@unique([centerId, nombre])
+  @@unique([pointId, nombre])
 }
 
 model Donation {
-  id         String           @id @default(cuid())
-  center     CollectionCenter @relation(fields: [centerId], references: [id], onDelete: Cascade)
-  centerId   String
-  donante    User?            @relation(fields: [donanteId], references: [id])
+  id         String       @id @default(cuid())
+  point      SupportPoint @relation(fields: [pointId], references: [id], onDelete: Cascade)
+  pointId    String
+  donante    User?        @relation(fields: [donanteId], references: [id])
   donanteId  String?
   donanteNombre String?
   item       String
   cantidad   Int
   unidad     String @default("unidades")
-  createdAt  DateTime         @default(now())
+  createdAt  DateTime     @default(now())
 }
 
 model PushSubscription {

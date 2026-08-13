@@ -16,12 +16,26 @@ export type MapMarker = {
   href: string;
 };
 
-function colorIcon(color: string) {
+// Marcador genérico (usado por puntos de apoyo: acopio, salud, cocinas...).
+export type SimplePoint = {
+  id: string;
+  lat: number;
+  lng: number;
+  color: string;
+  emoji?: string;
+  label: string;
+  sublabel?: string;
+  href: string;
+};
+
+function colorIcon(color: string, emoji?: string) {
   return L.divIcon({
     className: "",
-    html: `<div style="background:${color};width:22px;height:22px;border-radius:50%;border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
+    html: emoji
+      ? `<div style="background:${color};width:26px;height:26px;border-radius:50%;border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1">${emoji}</div>`
+      : `<div style="background:${color};width:22px;height:22px;border-radius:50%;border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,
+    iconSize: [emoji ? 26 : 22, emoji ? 26 : 22],
+    iconAnchor: [emoji ? 13 : 11, emoji ? 13 : 11],
   });
 }
 
@@ -29,6 +43,7 @@ export default function MapView({
   center,
   zoom = 13,
   markers,
+  points,
   onMapClick,
   pin,
   height = "480px",
@@ -36,6 +51,7 @@ export default function MapView({
   center: [number, number];
   zoom?: number;
   markers?: MapMarker[];
+  points?: SimplePoint[];
   onMapClick?: (lat: number, lng: number) => void;
   pin?: [number, number] | null;
   height?: string;
@@ -61,6 +77,19 @@ export default function MapView({
                 <p>{TIPO_LABELS[m.tipo] || m.tipo}</p>
                 <p>Urgencia: {URGENCIA_LABELS[m.urgencia] || m.urgencia}</p>
                 <Link href={m.href} className="text-red-600 underline">
+                  Ver detalle
+                </Link>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+        {points?.map((p) => (
+          <Marker key={p.id} position={[p.lat, p.lng]} icon={colorIcon(p.color, p.emoji)}>
+            <Popup>
+              <div className="text-sm">
+                <p className="font-semibold">{p.label}</p>
+                {p.sublabel && <p>{p.sublabel}</p>}
+                <Link href={p.href} className="text-red-600 underline">
                   Ver detalle
                 </Link>
               </div>

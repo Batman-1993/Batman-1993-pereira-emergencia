@@ -84,44 +84,48 @@ CREATE TABLE "MissingPerson" (
 );
 
 -- CreateTable
-CREATE TABLE "CollectionCenter" (
+CREATE TABLE "SupportPoint" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "nombre" TEXT NOT NULL,
+    "categoria" TEXT NOT NULL DEFAULT 'ACOPIO',
     "ciudad" TEXT NOT NULL DEFAULT 'Pereira',
     "direccion" TEXT NOT NULL,
     "lat" REAL NOT NULL,
     "lng" REAL NOT NULL,
+    "abierto" BOOLEAN NOT NULL DEFAULT true,
+    "verificado" BOOLEAN NOT NULL DEFAULT false,
+    "ultimaConfirmacion" DATETIME,
     "capacidad" INTEGER,
     "personasAyudadas" INTEGER NOT NULL DEFAULT 0,
     "telefono" TEXT,
     "responsableId" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "CollectionCenter_responsableId_fkey" FOREIGN KEY ("responsableId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT "SupportPoint_responsableId_fkey" FOREIGN KEY ("responsableId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "InventoryItem" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "centerId" TEXT NOT NULL,
+    "pointId" TEXT NOT NULL,
     "nombre" TEXT NOT NULL,
     "categoria" TEXT NOT NULL,
     "cantidad" INTEGER NOT NULL DEFAULT 0,
     "unidad" TEXT NOT NULL DEFAULT 'unidades',
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "InventoryItem_centerId_fkey" FOREIGN KEY ("centerId") REFERENCES "CollectionCenter" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "InventoryItem_pointId_fkey" FOREIGN KEY ("pointId") REFERENCES "SupportPoint" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "Donation" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "centerId" TEXT NOT NULL,
+    "pointId" TEXT NOT NULL,
     "donanteId" TEXT,
     "donanteNombre" TEXT,
     "item" TEXT NOT NULL,
     "cantidad" INTEGER NOT NULL,
     "unidad" TEXT NOT NULL DEFAULT 'unidades',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "Donation_centerId_fkey" FOREIGN KEY ("centerId") REFERENCES "CollectionCenter" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Donation_pointId_fkey" FOREIGN KEY ("pointId") REFERENCES "SupportPoint" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "Donation_donanteId_fkey" FOREIGN KEY ("donanteId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -156,7 +160,7 @@ CREATE INDEX "ReportStatusLog_reportId_idx" ON "ReportStatusLog"("reportId");
 CREATE UNIQUE INDEX "ReportAssignment_reportId_voluntarioId_key" ON "ReportAssignment"("reportId", "voluntarioId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "InventoryItem_centerId_nombre_key" ON "InventoryItem"("centerId", "nombre");
+CREATE UNIQUE INDEX "InventoryItem_pointId_nombre_key" ON "InventoryItem"("pointId", "nombre");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "PushSubscription_endpoint_key" ON "PushSubscription"("endpoint");
