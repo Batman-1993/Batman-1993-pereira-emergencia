@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import DynamicMap from "@/components/DynamicMap";
 import PushSubscribeButton from "@/components/PushSubscribeButton";
+import LiveIndicator from "@/components/LiveIndicator";
+import { usePolling } from "@/lib/usePolling";
 import { CIUDADES, ciudadCoords, ESTADO_COLOR, ESTADO_LABELS, TIPO_LABELS, URGENCIA_COLOR, URGENCIA_LABELS } from "@/lib/constants";
 
 type ReportRow = {
@@ -23,20 +25,20 @@ export default function HomePage() {
   const [ciudad, setCiudad] = useState("Pereira");
   const [tipo, setTipo] = useState("");
   const [urgencia, setUrgencia] = useState("");
-  const [reports, setReports] = useState<ReportRow[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const query = useMemo(() => {
     const params = new URLSearchParams();
     if (ciudad) params.set("ciudad", ciudad);
     if (tipo) params.set("tipo", tipo);
     if (urgencia) params.set("urgencia", urgencia);
-    setLoading(true);
-    fetch(`/api/reports?${params.toString()}`)
-      .then((r) => r.json())
-      .then((data) => setReports(data.reports || []))
-      .finally(() => setLoading(false));
+    return params.toString();
   }, [ciudad, tipo, urgencia]);
+
+  const { data, loading, updatedAt, refresh } = usePolling<{ reports: ReportRow[] }>(
+    `/api/reports?${query}`,
+    15000
+  );
+  const reports = data?.reports || [];
 
   const center = useMemo(() => {
     const c = ciudadCoords(ciudad);
@@ -103,6 +105,8 @@ export default function HomePage() {
         </div>
         <PushSubscribeButton ciudad={ciudad} />
       </div>
+
+      <LiveIndicator updatedAt={updatedAt} onRefresh={refresh} />
 
       <div className="flex gap-3 flex-wrap text-sm">
         <span className="badge" style={{ background: URGENCIA_COLOR.CRITICA }}>

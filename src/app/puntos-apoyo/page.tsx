@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import DynamicMap from "@/components/DynamicMap";
 import SupportPointBadges from "@/components/SupportPointBadges";
+import LiveIndicator from "@/components/LiveIndicator";
+import { usePolling } from "@/lib/usePolling";
 import {
   CATEGORIA_PUNTO_COLOR,
   CATEGORIA_PUNTO_ICONO,
@@ -32,8 +34,6 @@ type SupportPoint = {
 export default function PuntosApoyoPage() {
   const [ciudad, setCiudad] = useState("Pereira");
   const [categoria, setCategoria] = useState("");
-  const [points, setPoints] = useState<SupportPoint[]>([]);
-  const [loading, setLoading] = useState(true);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
 
   useEffect(() => {
@@ -45,16 +45,18 @@ export default function PuntosApoyoPage() {
     }
   }, []);
 
-  useEffect(() => {
+  const query = useMemo(() => {
     const params = new URLSearchParams();
     if (ciudad) params.set("ciudad", ciudad);
     if (categoria) params.set("categoria", categoria);
-    setLoading(true);
-    fetch(`/api/support-points?${params.toString()}`)
-      .then((r) => r.json())
-      .then((data) => setPoints(data.points || []))
-      .finally(() => setLoading(false));
+    return params.toString();
   }, [ciudad, categoria]);
+
+  const { data, loading, updatedAt, refresh } = usePolling<{ points: SupportPoint[] }>(
+    `/api/support-points?${query}`,
+    15000
+  );
+  const points = data?.points || [];
 
   const center = useMemo(() => {
     const c = ciudadCoords(ciudad);
@@ -110,6 +112,8 @@ export default function PuntosApoyoPage() {
           </button>
         ))}
       </div>
+
+      <LiveIndicator updatedAt={updatedAt} onRefresh={refresh} />
 
       <div className="card text-xs text-slate-600">
         <span className="font-semibold">Última confirmación: </span>

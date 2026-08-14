@@ -1,11 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ESTADO_LABELS } from "@/lib/constants";
 
-export default function ReportActions({ reportId, estadoActual }: { reportId: string; estadoActual: string }) {
-  const router = useRouter();
+export default function ReportActions({
+  reportId,
+  estadoActual,
+  onSaved,
+}: {
+  reportId: string;
+  estadoActual: string;
+  onSaved?: () => void;
+}) {
   const [estado, setEstado] = useState(estadoActual);
   const [nota, setNota] = useState("");
   const [asignarme, setAsignarme] = useState(true);
@@ -21,7 +27,7 @@ export default function ReportActions({ reportId, estadoActual }: { reportId: st
     setLoading(false);
     if (res.ok) {
       setNota("");
-      router.refresh();
+      onSaved?.();
     }
   }
 

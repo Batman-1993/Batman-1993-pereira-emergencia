@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import LiveIndicator from "@/components/LiveIndicator";
+import { usePolling } from "@/lib/usePolling";
 import { ESTADO_PERSONA_COLOR, ESTADO_PERSONA_LABELS } from "@/lib/constants";
 
 type Person = {
@@ -16,23 +18,26 @@ type Person = {
 
 export default function DesaparecidosPage() {
   const [q, setQ] = useState("");
+  const [qDebounced, setQDebounced] = useState("");
   const [estado, setEstado] = useState("");
-  const [persons, setPersons] = useState<Person[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (q) params.set("q", q);
-    if (estado) params.set("estado", estado);
-    setLoading(true);
-    const t = setTimeout(() => {
-      fetch(`/api/missing-persons?${params.toString()}`)
-        .then((r) => r.json())
-        .then((data) => setPersons(data.persons || []))
-        .finally(() => setLoading(false));
-    }, 250);
+    const t = setTimeout(() => setQDebounced(q), 300);
     return () => clearTimeout(t);
-  }, [q, estado]);
+  }, [q]);
+
+  const query = useMemo(() => {
+    const params = new URLSearchParams();
+    if (qDebounced) params.set("q", qDebounced);
+    if (estado) params.set("estado", estado);
+    return params.toString();
+  }, [qDebounced, estado]);
+
+  const { data, loading, updatedAt, refresh } = usePolling<{ persons: Person[] }>(
+    `/api/missing-persons?${query}`,
+    15000
+  );
+  const persons = data?.persons || [];
 
   return (
     <div className="space-y-4">
@@ -60,6 +65,8 @@ export default function DesaparecidosPage() {
           ))}
         </select>
       </div>
+
+      <LiveIndicator updatedAt={updatedAt} onRefresh={refresh} />
 
       {loading && <p className="text-sm text-slate-500">Buscando...</p>}
       {!loading && persons.length === 0 && <p className="text-sm text-slate-500">No hay resultados.</p>}

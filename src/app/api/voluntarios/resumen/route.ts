@@ -1,14 +1,11 @@
-import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import VoluntariosClient from "@/components/VoluntariosClient";
 
-export const dynamic = "force-dynamic";
-
-export default async function VoluntariosPage() {
+export async function GET() {
   const session = await getSession();
   if (!session || !["VOLUNTARIO", "ADMIN"].includes(session.role)) {
-    redirect("/login");
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
   const [pendientes, misAsignaciones, resueltosHoy] = await Promise.all([
@@ -26,9 +23,5 @@ export default async function VoluntariosPage() {
     }),
   ]);
 
-  return (
-    <VoluntariosClient
-      initialResumen={{ pendientes, misAsignaciones, resueltosHoy, nombre: session.nombre }}
-    />
-  );
+  return NextResponse.json({ pendientes, misAsignaciones, resueltosHoy, nombre: session.nombre });
 }

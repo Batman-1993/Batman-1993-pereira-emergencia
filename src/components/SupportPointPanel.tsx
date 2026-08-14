@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 const CATEGORIAS = ["agua", "alimentos", "aseo", "medicinas", "abrigo", "otros"];
 
@@ -9,12 +8,13 @@ export default function SupportPointPanel({
   pointId,
   puedeGestionar,
   abierto,
+  onSaved,
 }: {
   pointId: string;
   puedeGestionar: boolean;
   abierto: boolean;
+  onSaved?: () => void;
 }) {
-  const router = useRouter();
   const [item, setItem] = useState("");
   const [categoria, setCategoria] = useState("alimentos");
   const [cantidad, setCantidad] = useState("");
@@ -44,7 +44,7 @@ export default function SupportPointPanel({
     }
     setItem("");
     setCantidad("");
-    router.refresh();
+    onSaved?.();
   }
 
   async function accion(body: Record<string, unknown>) {
@@ -55,7 +55,7 @@ export default function SupportPointPanel({
       body: JSON.stringify(body),
     });
     setAccionLoading(false);
-    router.refresh();
+    onSaved?.();
   }
 
   return (

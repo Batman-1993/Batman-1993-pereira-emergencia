@@ -1,0 +1,138 @@
+"use client";
+
+import DynamicMap from "@/components/DynamicMap";
+import ReportActions from "@/components/ReportActions";
+import LiveIndicator from "@/components/LiveIndicator";
+import { usePolling } from "@/lib/usePolling";
+import { ESTADO_COLOR, ESTADO_LABELS, TIPO_LABELS, URGENCIA_COLOR, URGENCIA_LABELS } from "@/lib/constants";
+
+export type ReportDetail = {
+  id: string;
+  tipo: string;
+  urgencia: string;
+  estado: string;
+  titulo: string;
+  descripcion: string;
+  ciudad: string;
+  direccion: string | null;
+  lat: number;
+  lng: number;
+  personasAfectadas: number | null;
+  contactoNombre: string | null;
+  contactoTelefono: string | null;
+  fotos: { id: string; url: string }[];
+  reportadoPor: { nombre: string } | null;
+  statusLogs: { id: string; estado: string; nota: string | null; createdAt: string; autor: { nombre: string } | null }[];
+  asignaciones: { id: string; voluntario: { nombre: string; telefono: string | null } }[];
+};
+
+export default function ReportDetailClient({
+  reportId,
+  initialReport,
+  puedeGestionar,
+  estaLogueado,
+}: {
+  reportId: string;
+  initialReport: ReportDetail;
+  puedeGestionar: boolean;
+  estaLogueado: boolean;
+}) {
+  const { data, updatedAt, refresh } = usePolling<{ report: ReportDetail }>(`/api/reports/${reportId}`, 8000);
+  const report = data?.report ?? initialReport;
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="badge" style={{ background: URGENCIA_COLOR[report.urgencia] }}>
+          {URGENCIA_LABELS[report.urgencia]}
+        </span>
+        <span className="badge" style={{ background: ESTADO_COLOR[report.estado] }}>
+          {ESTADO_LABELS[report.estado]}
+        </span>
+        <span className="text-sm text-slate-500">{TIPO_LABELS[report.tipo]} · {report.ciudad}</span>
+      </div>
+
+      <LiveIndicator updatedAt={updatedAt} onRefresh={refresh} />
+
+      <h1 className="text-2xl font-bold">{report.titulo}</h1>
+      <p className="whitespace-pre-wrap">{report.descripcion}</p>
+
+      {report.direccion && <p className="text-sm text-slate-600">📍 {report.direccion}</p>}
+      {!!report.personasAfectadas && (
+        <p className="text-sm text-slate-600">👥 Personas afectadas (aprox.): {report.personasAfectadas}</p>
+      )}
+      {(report.contactoNombre || report.reportadoPor) && (
+        <p className="text-sm text-slate-600">
+          Reportado por: {report.contactoNombre || report.reportadoPor?.nombre}
+          {report.contactoTelefono ? ` · ${report.contactoTelefono}` : ""}
+        </p>
+      )}
+
+      {report.fotos.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {report.fotos.map((f) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={f.id} src={f.url} alt="" className="rounded-lg h-32 w-full object-cover" />
+          ))}
+        </div>
+      )}
+
+      <DynamicMap
+        center={[report.lat, report.lng]}
+        zoom={16}
+        markers={[
+          {
+            id: report.id,
+            lat: report.lat,
+            lng: report.lng,
+            titulo: report.titulo,
+            urgencia: report.urgencia as any,
+            tipo: report.tipo as any,
+            estado: report.estado,
+            href: `/reportes/${report.id}`,
+          },
+        ]}
+        height="300px"
+      />
+
+      {report.asignaciones.length > 0 && (
+        <div className="card">
+          <h3 className="font-semibold mb-1">Voluntarios asignados</h3>
+          <ul className="text-sm list-disc list-inside">
+            {report.asignaciones.map((a) => (
+              <li key={a.id}>
+                {a.voluntario.nombre}
+                {a.voluntario.telefono ? ` · ${a.voluntario.telefono}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="card">
+        <h3 className="font-semibold mb-2">Seguimiento / evolución</h3>
+        <ol className="space-y-2">
+          {report.statusLogs.map((log) => (
+            <li key={log.id} className="text-sm border-l-2 border-slate-300 pl-3">
+              <span className="font-semibold">{ESTADO_LABELS[log.estado]}</span>{" "}
+              <span className="text-slate-400">— {new Date(log.createdAt).toLocaleString("es-CO")}</span>
+              {log.autor?.nombre && <span className="text-slate-500"> · {log.autor.nombre}</span>}
+              {log.nota && <p className="text-slate-600">{log.nota}</p>}
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {puedeGestionar && <ReportActions reportId={report.id} estadoActual={report.estado} onSaved={refresh} />}
+      {!estaLogueado && (
+        <p className="text-sm text-slate-500">
+          ¿Eres voluntario rescatista?{" "}
+          <a href="/login" className="text-red-600 font-semibold">
+            Inicia sesión
+          </a>{" "}
+          para actualizar el estado de este reporte.
+        </p>
+      )}
+    </div>
+  );
+}
